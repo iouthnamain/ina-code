@@ -34,8 +34,8 @@ export function buildGeminiAcpSpawnInput(
   environment?: NodeJS.ProcessEnv,
 ): AcpSessionRuntime.AcpSpawnInput {
   return {
-    command: geminiSettings?.binaryPath || "agy",
-    args: ["stdio"],
+    command: geminiSettings?.binaryPath || "gemini",
+    args: ["--acp"],
     cwd,
     env: {
       ...environment,

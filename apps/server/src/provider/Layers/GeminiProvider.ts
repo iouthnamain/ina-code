@@ -145,7 +145,7 @@ const runGeminiVersionCommand = (
   environment: NodeJS.ProcessEnv = process.env,
 ) =>
   Effect.gen(function* () {
-    const command = geminiSettings.binaryPath || "agy";
+    const command = geminiSettings.binaryPath || "gemini";
     const spawnCommand = yield* resolveSpawnCommand(command, ["--version"], {
       env: environment,
     });
@@ -206,8 +206,8 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
         status: "error",
         auth: { status: "unknown" },
         message: isCommandMissingCause(error)
-          ? "Antigravity CLI (`agy`) is not installed or not on PATH."
-          : "Failed to execute Antigravity CLI health check.",
+          ? "Antigravity (gemini) is not installed or not on PATH."
+          : "Failed to execute Antigravity (gemini) health check.",
       },
     });
   }
@@ -223,7 +223,8 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
         version: null,
         status: "error",
         auth: { status: "unknown" },
-        message: "Antigravity CLI is installed but timed out while running `agy --version`.",
+        message:
+          "Antigravity (gemini) is installed but timed out while running `gemini --version`.",
       },
     });
   }
@@ -231,7 +232,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
   const versionOutput = versionResult.success.value;
   const version = parseGenericCliVersion(`${versionOutput.stdout}\n${versionOutput.stderr}`);
   if (versionOutput.code !== 0) {
-    yield* Effect.logWarning("Antigravity CLI version probe exited with a non-zero status.", {
+    yield* Effect.logWarning("Antigravity (gemini) version probe exited with a non-zero status.", {
       exitCode: versionOutput.code,
       stdoutLength: versionOutput.stdout.length,
       stderrLength: versionOutput.stderr.length,
@@ -246,7 +247,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
         version,
         status: "error",
         auth: { status: "unknown" },
-        message: "Antigravity CLI is installed but failed to run.",
+        message: "Antigravity (gemini) is installed but failed to run.",
       },
     });
   }
@@ -256,7 +257,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
     Effect.exit,
   );
   if (Exit.isFailure(discoveryExit)) {
-    yield* Effect.logWarning("Antigravity CLI ACP model discovery failed", {
+    yield* Effect.logWarning("Antigravity (gemini) ACP model discovery failed", {
       errorTag: causeErrorTag(discoveryExit.cause),
     });
     return buildServerProvider({
@@ -270,13 +271,13 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
         status: "error",
         auth: { status: "unknown" },
         message:
-          "Antigravity CLI is installed but ACP startup failed. Check server logs for details.",
+          "Antigravity (gemini) is installed but ACP startup failed. Check server logs for details.",
       },
     });
   }
   if (Option.isNone(discoveryExit.value)) {
     yield* Effect.logWarning(
-      `Antigravity CLI ACP model discovery timed out after ${GEMINI_ACP_MODEL_DISCOVERY_TIMEOUT_MS}ms.`,
+      `Antigravity (gemini) ACP model discovery timed out after ${GEMINI_ACP_MODEL_DISCOVERY_TIMEOUT_MS}ms.`,
     );
     return buildServerProvider({
       presentation: GEMINI_PRESENTATION,
@@ -288,7 +289,7 @@ export const checkGeminiProviderStatus = Effect.fn("checkGeminiProviderStatus")(
         version,
         status: "error",
         auth: { status: "unknown" },
-        message: `Antigravity CLI is installed but ACP startup timed out after ${GEMINI_ACP_MODEL_DISCOVERY_TIMEOUT_MS}ms.`,
+        message: `Antigravity (gemini) is installed but ACP startup timed out after ${GEMINI_ACP_MODEL_DISCOVERY_TIMEOUT_MS}ms.`,
       },
     });
   }

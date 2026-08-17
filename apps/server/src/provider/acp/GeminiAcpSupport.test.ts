@@ -27,7 +27,7 @@ describe("buildGeminiAcpSpawnInput", () => {
 
     expect(spawn).toEqual({
       command: "/usr/local/bin/agy",
-      args: ["stdio"],
+      args: ["--acp"],
       cwd: "/tmp/project",
       env: {
         GEMINI_API_KEY: "secret",
