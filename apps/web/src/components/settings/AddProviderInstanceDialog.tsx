@@ -84,11 +84,6 @@ const COMING_SOON_DRIVER_OPTIONS: readonly ComingSoonDriverOption[] = [
     icon: GithubCopilotIcon,
   },
   {
-    value: ProviderDriverKind.make("gemini"),
-    label: "Gemini",
-    icon: Gemini,
-  },
-  {
     value: ProviderDriverKind.make("acpRegistry"),
     label: "ACP Registry",
     icon: ACPRegistryIcon,
