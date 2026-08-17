@@ -27,7 +27,6 @@ import {
   applyGeminiAcpModelSelection,
   currentGeminiModelIdFromSessionSetup,
   makeGeminiAcpRuntime,
-  resolveGeminiAcpBaseModelId,
 } from "../provider/acp/GeminiAcpSupport.ts";
 
 const GEMINI_TIMEOUT_MS = 180_000;
@@ -59,7 +58,7 @@ export const makeGeminiTextGeneration = Effect.fn("makeGeminiTextGeneration")(fu
     modelSelection: ModelSelection;
   }): Effect.Effect<S["Type"], TextGenerationError, S["DecodingServices"]> =>
     Effect.gen(function* () {
-      const resolvedModel = resolveGeminiAcpBaseModelId(modelSelection.model);
+      const resolvedModel = modelSelection.model;
       const outputRef = yield* Ref.make("");
       const runtime = yield* makeGeminiAcpRuntime({
         geminiSettings,
@@ -85,7 +84,9 @@ export const makeGeminiTextGeneration = Effect.fn("makeGeminiTextGeneration")(fu
         const started = yield* runtime.start();
         yield* applyGeminiAcpModelSelection({
           runtime,
-          currentModelId: currentGeminiModelIdFromSessionSetup(started.sessionSetupResult),
+          currentModelId: currentGeminiModelIdFromSessionSetup(
+            started.sessionSetupResult.configOptions,
+          ),
           requestedModelId: resolvedModel,
           mapError: (cause) =>
             new TextGenerationError({

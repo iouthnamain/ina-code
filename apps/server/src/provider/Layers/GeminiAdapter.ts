@@ -57,7 +57,6 @@ import {
   applyGeminiAcpModelSelection,
   currentGeminiModelIdFromSessionSetup,
   makeGeminiAcpRuntime,
-  resolveGeminiAcpBaseModelId,
 } from "../acp/GeminiAcpSupport.ts";
 import {
   extractXAiAskUserQuestions,
@@ -739,12 +738,14 @@ export function makeGeminiAdapter(
             ),
           );
 
-          const requestedStartModelId = geminiModelSelection?.model
-            ? resolveGeminiAcpBaseModelId(geminiModelSelection.model)
-            : undefined;
+          // The T3 Code UI passes the `slug` from the `ServerProviderModel` we returned during discovery.
+          // For agy-acp, the slug is exactly the `value` expected by the configOption, so we must pass it verbatim.
+          const requestedStartModelId = geminiModelSelection?.model;
           const boundModelId = yield* applyGeminiAcpModelSelection({
             runtime: acp,
-            currentModelId: currentGeminiModelIdFromSessionSetup(started.sessionSetupResult),
+            currentModelId: currentGeminiModelIdFromSessionSetup(
+              started.sessionSetupResult.configOptions,
+            ),
             requestedModelId: requestedStartModelId,
             mapError: (cause) =>
               mapAcpToAdapterError(PROVIDER, input.threadId, "session/set_model", cause),
@@ -757,7 +758,7 @@ export function makeGeminiAdapter(
             status: "ready",
             runtimeMode: input.runtimeMode,
             cwd,
-            ...(boundModelId ? { model: resolveGeminiAcpBaseModelId(boundModelId) } : {}),
+            ...(boundModelId ? { model: boundModelId } : {}),
             threadId: input.threadId,
             resumeCursor: {
               schemaVersion: GEMINI_RESUME_VERSION,
@@ -943,9 +944,7 @@ export function makeGeminiAdapter(
                 input.modelSelection?.instanceId === boundInstanceId
                   ? input.modelSelection
                   : undefined;
-              const requestedTurnModelId = turnModelSelection?.model
-                ? resolveGeminiAcpBaseModelId(turnModelSelection.model)
-                : undefined;
+              const requestedTurnModelId = turnModelSelection?.model;
               const currentModelId = yield* applyGeminiAcpModelSelection({
                 runtime: ctx.acp,
                 currentModelId: ctx.currentModelId,
@@ -1002,9 +1001,7 @@ export function makeGeminiAdapter(
               }
 
               ctx.currentModelId = currentModelId;
-              const displayModel = currentModelId
-                ? resolveGeminiAcpBaseModelId(currentModelId)
-                : undefined;
+              const displayModel = currentModelId;
               for (let yieldAttempt = 0; yieldAttempt < 8; yieldAttempt += 1) {
                 yield* Effect.yieldNow;
               }

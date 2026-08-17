@@ -90,16 +90,18 @@ export function resolveGeminiAcpBaseModelId(model: string | null | undefined): s
 }
 
 export function currentGeminiModelIdFromSessionSetup(
-  sessionSetupResult:
-    | EffectAcpSchema.LoadSessionResponse
-    | EffectAcpSchema.NewSessionResponse
-    | EffectAcpSchema.ResumeSessionResponse,
+  configOptions: ReadonlyArray<EffectAcpSchema.SessionConfigOption> | null | undefined,
 ): string | undefined {
-  return sessionSetupResult.models?.currentModelId?.trim() || undefined;
+  if (!configOptions) return undefined;
+  const modelConfig = configOptions.find((c) => c.id === "model");
+  if (modelConfig && modelConfig.type === "select") {
+    return modelConfig.currentValue?.toString().trim() || undefined;
+  }
+  return undefined;
 }
 
 export function applyGeminiAcpModelSelection<E>(input: {
-  readonly runtime: Pick<AcpSessionRuntime.AcpSessionRuntime["Service"], "setSessionModel">;
+  readonly runtime: Pick<AcpSessionRuntime.AcpSessionRuntime["Service"], "setModel">;
   readonly currentModelId: string | undefined;
   readonly requestedModelId: string | undefined;
   readonly mapError: (cause: EffectAcpErrors.AcpError) => E;
@@ -110,6 +112,6 @@ export function applyGeminiAcpModelSelection<E>(input: {
     return Effect.succeed(input.currentModelId);
   }
   return input.runtime
-    .setSessionModel(input.requestedModelId)
+    .setModel(input.requestedModelId)
     .pipe(Effect.mapError(input.mapError), Effect.as(input.requestedModelId));
 }

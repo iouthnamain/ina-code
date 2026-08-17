@@ -45,17 +45,16 @@ describe("applyGeminiAcpModelSelection", () => {
   const makeRecordingRuntime = (failure?: EffectAcpErrors.AcpError) => {
     const modelCalls: Array<string> = [];
     const runtime = {
-      setSessionModel: (modelId: string) =>
+      setModel: (modelId: string) =>
         Effect.gen(function* () {
           modelCalls.push(modelId);
           if (failure) return yield* failure;
-          return {};
         }),
     };
     return { runtime, modelCalls };
   };
 
-  it.effect("calls session/set_model when the requested model differs from current", () =>
+  it.effect("calls setModel when the requested model differs from current", () =>
     Effect.gen(function* () {
       const { runtime, modelCalls } = makeRecordingRuntime();
       const result = yield* applyGeminiAcpModelSelection({
@@ -69,7 +68,7 @@ describe("applyGeminiAcpModelSelection", () => {
     }),
   );
 
-  it.effect("skips set_model when requested matches current", () =>
+  it.effect("skips setModel when requested matches current", () =>
     Effect.gen(function* () {
       const { runtime, modelCalls } = makeRecordingRuntime();
       const result = yield* applyGeminiAcpModelSelection({
@@ -83,7 +82,7 @@ describe("applyGeminiAcpModelSelection", () => {
     }),
   );
 
-  it.effect("skips set_model when no model is requested", () =>
+  it.effect("skips setModel when no model is requested", () =>
     Effect.gen(function* () {
       const { runtime, modelCalls } = makeRecordingRuntime();
       const result = yield* applyGeminiAcpModelSelection({
@@ -97,7 +96,7 @@ describe("applyGeminiAcpModelSelection", () => {
     }),
   );
 
-  it.effect("propagates session/set_model failures via mapError", () =>
+  it.effect("propagates setModel failures via mapError", () =>
     Effect.gen(function* () {
       const failure = EffectAcpErrors.AcpRequestError.invalidParams("session id not known");
       const { runtime } = makeRecordingRuntime(failure);

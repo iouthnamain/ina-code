@@ -29,7 +29,7 @@ import {
   enrichProviderSnapshotWithVersionAdvisory,
   type ProviderMaintenanceCapabilities,
 } from "../providerMaintenance.ts";
-import { makeGeminiAcpRuntime, resolveGeminiAcpBaseModelId } from "../acp/GeminiAcpSupport.ts";
+import { makeGeminiAcpRuntime } from "../acp/GeminiAcpSupport.ts";
 
 const GEMINI_PRESENTATION = {
   displayName: "Gemini",
@@ -99,28 +99,44 @@ function geminiModelsFromSettings(
   return providerModelsFromSettings(builtInModels, customModels ?? [], EMPTY_CAPABILITIES);
 }
 
-function buildGeminiDiscoveredModelsFromSessionModelState(
-  modelState: EffectAcpSchema.SessionModelState | null | undefined,
+function buildGeminiDiscoveredModelsFromConfigOptions(
+  configOptions: ReadonlyArray<EffectAcpSchema.SessionConfigOption> | null | undefined,
 ): ReadonlyArray<ServerProviderModel> {
-  if (!modelState || modelState.availableModels.length === 0) {
+  if (!configOptions || configOptions.length === 0) {
     return [];
   }
+  const modelConfig = configOptions.find((c) => c.id === "model");
+  if (!modelConfig || modelConfig.type !== "select" || !modelConfig.options) {
+    return [];
+  }
+
   const seen = new Set<string>();
-  return modelState.availableModels
-    .map((model): ServerProviderModel | undefined => {
-      const slug = resolveGeminiAcpBaseModelId(model.modelId);
-      if (!slug || seen.has(slug)) {
-        return undefined;
-      }
-      seen.add(slug);
-      return {
+  return modelConfig.options.flatMap((option): ReadonlyArray<ServerProviderModel> => {
+    // For agy-acp, the 'value' is actually what we should use as the name,
+    // but we need to create a slug for T3 Code to use internally.
+    // Wait, if T3 Code sets the model, it needs to send the *value* back.
+    // So the slug MUST match the value perfectly, otherwise agy-acp will reject it!
+    if (typeof option === "object" && "group" in option) {
+      // We don't currently support grouped options, so skip them
+      return [];
+    }
+    const rawValue = typeof option === "string" ? option : option.value;
+    const name = typeof option === "string" ? option : (option.name ?? option.value);
+
+    const slug = rawValue.toString();
+    if (!slug || seen.has(slug)) {
+      return [];
+    }
+    seen.add(slug);
+    return [
+      {
         slug,
-        name: model.name.trim() || slug,
+        name: name.toString().trim() || slug,
         isCustom: false,
         capabilities: EMPTY_CAPABILITIES,
-      };
-    })
-    .filter((model): model is ServerProviderModel => model !== undefined);
+      },
+    ];
+  });
 }
 
 const discoverGeminiModelsViaAcp = (
@@ -137,7 +153,8 @@ const discoverGeminiModelsViaAcp = (
       clientInfo: { name: "t3-code-provider-probe", version: "0.0.0" },
     });
     const started = yield* acp.start();
-    return buildGeminiDiscoveredModelsFromSessionModelState(started.sessionSetupResult.models);
+    const configOptions = yield* acp.getConfigOptions;
+    return buildGeminiDiscoveredModelsFromConfigOptions(configOptions);
   }).pipe(Effect.scoped);
 
 const runGeminiVersionCommand = (
