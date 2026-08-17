@@ -20,14 +20,18 @@ describe("resolveGeminiAcpBaseModelId", () => {
 
 describe("buildGeminiAcpSpawnInput", () => {
   it("passes the T3 Code referrer through Gemini OAuth env", () => {
-    const spawn = buildGeminiAcpSpawnInput({ binaryPath: "/usr/local/bin/agy" }, "/tmp/project", {
-      GEMINI_API_KEY: "secret",
-      GEMINI_OAUTH2_REFERRER: "other-client",
-    });
+    const spawn = buildGeminiAcpSpawnInput(
+      { binaryPath: "/usr/local/bin/agy-acp" },
+      "/tmp/project",
+      {
+        GEMINI_API_KEY: "secret",
+        GEMINI_OAUTH2_REFERRER: "other-client",
+      },
+    );
 
     expect(spawn).toEqual({
-      command: "/usr/local/bin/agy",
-      args: ["--acp"],
+      command: "/usr/local/bin/agy-acp",
+      args: [],
       cwd: "/tmp/project",
       env: {
         GEMINI_API_KEY: "secret",

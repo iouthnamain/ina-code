@@ -466,11 +466,11 @@ export const GeminiSettings = makeProviderSettingsSchema(
       Schema.withDecodingDefault(Effect.succeed(true)),
       Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
     ),
-    binaryPath: makeBinaryPathSetting("gemini").pipe(
+    binaryPath: makeBinaryPathSetting("agy-acp").pipe(
       Schema.annotateKey({
         title: "Binary path",
-        description: "Path to the Gemini/Antigravity CLI binary.",
-        providerSettingsForm: { placeholder: "gemini", clearWhenEmpty: "omit" },
+        description: "Path to the Antigravity ACP adapter (agy-acp).",
+        providerSettingsForm: { placeholder: "agy-acp", clearWhenEmpty: "omit" },
       }),
     ),
     customModels: Schema.Array(Schema.String).pipe(
