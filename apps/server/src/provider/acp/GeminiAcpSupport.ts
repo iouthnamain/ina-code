@@ -14,7 +14,7 @@ const GEMINI_API_KEY_ENV = "GEMINI_API_KEY";
 const GEMINI_OAUTH2_REFERRER_ENV = "GEMINI_OAUTH2_REFERRER";
 const T3_CODE_OAUTH_REFERRER = "t3code";
 const GEMINI_AUTH_METHOD_API_KEY = "gemini.api_key";
-const GEMINI_AUTH_METHOD_CACHED_TOKEN = "cached_token";
+const GEMINI_AUTH_METHOD_CACHED_TOKEN = "agy-login";
 const GEMINI_DRIVER_KIND = ProviderDriverKind.make("gemini");
 
 type GeminiAcpRuntimeGeminiSettings = Pick<GeminiSettings, "binaryPath">;
@@ -33,8 +33,12 @@ export function buildGeminiAcpSpawnInput(
   cwd: string,
   environment?: NodeJS.ProcessEnv,
 ): AcpSessionRuntime.AcpSpawnInput {
+  let command = geminiSettings?.binaryPath || "agy-acp";
+  if (command === "agy" || command === "gemini") {
+    command = "agy-acp";
+  }
   return {
-    command: geminiSettings?.binaryPath || "agy-acp",
+    command,
     args: [],
     cwd,
     env: {
@@ -44,10 +48,14 @@ export function buildGeminiAcpSpawnInput(
   };
 }
 
-function resolveGeminiAuthMethodId(environment: NodeJS.ProcessEnv | undefined): string {
-  return environment?.[GEMINI_API_KEY_ENV]?.trim()
-    ? GEMINI_AUTH_METHOD_API_KEY
-    : GEMINI_AUTH_METHOD_CACHED_TOKEN;
+function resolveGeminiAuthMethodId(environment: NodeJS.ProcessEnv | undefined): string | undefined {
+  // When a GEMINI_API_KEY is set, send an explicit `authenticate` with the
+  // API-key auth method so agy-acp verifies it immediately.
+  // Otherwise, skip the authenticate RPC entirely — agy-acp's session/new
+  // handler checks auth internally via requireAuthenticated, and the
+  // explicit authenticate call with the "agy-login" method redundantly
+  // spawns `agy models` which hangs for ~15s on piped stdin.
+  return environment?.[GEMINI_API_KEY_ENV]?.trim() ? GEMINI_AUTH_METHOD_API_KEY : undefined;
 }
 
 export const makeGeminiAcpRuntime = (

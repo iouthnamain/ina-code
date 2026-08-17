@@ -42,7 +42,7 @@ const EMPTY_CAPABILITIES: ModelCapabilities = createModelCapabilities({
 });
 
 const VERSION_PROBE_TIMEOUT_MS = 4_000;
-const GEMINI_ACP_MODEL_DISCOVERY_TIMEOUT_MS = 15_000;
+const GEMINI_ACP_MODEL_DISCOVERY_TIMEOUT_MS = 45_000;
 
 const GEMINI_BUILT_IN_MODELS: ReadonlyArray<ServerProviderModel> = [
   {
@@ -145,7 +145,10 @@ const runGeminiVersionCommand = (
   environment: NodeJS.ProcessEnv = process.env,
 ) =>
   Effect.gen(function* () {
-    const command = geminiSettings.binaryPath || "agy-acp";
+    let command = geminiSettings.binaryPath || "agy-acp";
+    if (command === "agy" || command === "gemini") {
+      command = "agy-acp";
+    }
     const spawnCommand = yield* resolveSpawnCommand(command, ["--version"], {
       env: environment,
     });
