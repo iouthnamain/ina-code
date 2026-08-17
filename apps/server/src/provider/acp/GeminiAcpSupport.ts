@@ -35,7 +35,7 @@ export function buildGeminiAcpSpawnInput(
 ): AcpSessionRuntime.AcpSpawnInput {
   return {
     command: geminiSettings?.binaryPath || "agy",
-    args: ["agent", "stdio"],
+    args: ["stdio"],
     cwd,
     env: {
       ...environment,
