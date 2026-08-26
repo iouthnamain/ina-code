@@ -47,6 +47,37 @@ const DEFAULT_CLAUDE_MODEL_CAPABILITIES: ModelCapabilities = createModelCapabili
   optionDescriptors: [],
 });
 
+const LOCAL_GPT_MODELS = new Set(["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]);
+
+/**
+ * Claude Code does not know the capabilities of arbitrary model ids until a
+ * provider-specific integration reports them. The local GPT gateway uses the
+ * same Claude Code effort vocabulary, so keep its custom model useful even
+ * when the gateway cannot answer the periodic capability probe.
+ */
+const LOCAL_GPT_CLAUDE_MODEL_CAPABILITIES: ModelCapabilities = createModelCapabilities({
+  optionDescriptors: [
+    buildSelectOptionDescriptor({
+      id: "effort",
+      label: "Reasoning",
+      options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High", isDefault: true },
+        { value: "xhigh", label: "Extra High" },
+        { value: "max", label: "Max" },
+        {
+          value: "ultracode",
+          label: "Ultracode",
+          description: "xhigh effort plus multi-agent workflow orchestration",
+        },
+        { value: "ultrathink", label: "Ultrathink" },
+      ],
+      promptInjectedValues: ["ultrathink"],
+    }),
+  ],
+});
+
 const CLAUDE_PRESENTATION = {
   displayName: "Claude",
   showInteractionModeToggle: true,
@@ -391,7 +422,23 @@ export function getClaudeModelCapabilities(model: string | null | undefined): Mo
   const slug = model?.trim();
   return (
     BUILT_IN_MODELS.find((candidate) => candidate.slug === slug)?.capabilities ??
+    (slug && LOCAL_GPT_MODELS.has(slug) ? LOCAL_GPT_CLAUDE_MODEL_CAPABILITIES : undefined) ??
     DEFAULT_CLAUDE_MODEL_CAPABILITIES
+  );
+}
+
+function claudeModelsFromSettings(
+  builtInModels: ReadonlyArray<ServerProviderModel>,
+  customModels: ReadonlyArray<string>,
+): ReadonlyArray<ServerProviderModel> {
+  return providerModelsFromSettings(
+    builtInModels,
+    customModels,
+    DEFAULT_CLAUDE_MODEL_CAPABILITIES,
+  ).map((model) =>
+    model.isCustom && LOCAL_GPT_MODELS.has(model.slug)
+      ? { ...model, capabilities: LOCAL_GPT_CLAUDE_MODEL_CAPABILITIES }
+      : model,
   );
 }
 
@@ -430,6 +477,7 @@ export function normalizeClaudeCliEffort(
   }
   if (
     effort === "xhigh" &&
+    !LOCAL_GPT_MODELS.has(model ?? "") &&
     model !== "claude-fable-5" &&
     model !== "claude-opus-5" &&
     model !== "claude-opus-4-8" &&
@@ -818,11 +866,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
 > {
   const resolvedEnvironment = environment ?? process.env;
   const checkedAt = DateTime.formatIso(yield* DateTime.now);
-  const allModels = providerModelsFromSettings(
-    BUILT_IN_MODELS,
-    claudeSettings.customModels,
-    DEFAULT_CLAUDE_MODEL_CAPABILITIES,
-  );
+  const allModels = claudeModelsFromSettings(BUILT_IN_MODELS, claudeSettings.customModels);
 
   if (!claudeSettings.enabled) {
     return buildServerProvider({
@@ -908,10 +952,9 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
     });
   }
 
-  const models = providerModelsFromSettings(
+  const models = claudeModelsFromSettings(
     getBuiltInClaudeModelsForVersion(parsedVersion),
     claudeSettings.customModels,
-    DEFAULT_CLAUDE_MODEL_CAPABILITIES,
   );
   const versionUpgradeMessage = supportsClaudeOpus5(parsedVersion)
     ? undefined
@@ -981,11 +1024,7 @@ export const makePendingClaudeProvider = (
 ): Effect.Effect<ServerProviderDraft> =>
   Effect.gen(function* () {
     const checkedAt = yield* nowIso;
-    const models = providerModelsFromSettings(
-      BUILT_IN_MODELS,
-      claudeSettings.customModels,
-      DEFAULT_CLAUDE_MODEL_CAPABILITIES,
-    );
+    const models = claudeModelsFromSettings(BUILT_IN_MODELS, claudeSettings.customModels);
 
     if (!claudeSettings.enabled) {
       return buildServerProvider({

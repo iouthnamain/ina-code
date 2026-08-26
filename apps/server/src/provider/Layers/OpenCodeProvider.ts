@@ -146,10 +146,17 @@ function titleCaseSlug(value: string): string {
 
 function inferDefaultVariant(
   providerID: string,
+  modelID: string,
   variants: ReadonlyArray<string>,
 ): string | undefined {
   if (variants.length === 1) {
     return variants[0];
+  }
+  if (modelID === "gpt-5.6-sol") {
+    return variants.includes("low") ? "low" : undefined;
+  }
+  if (modelID === "gpt-5.6-terra" || modelID === "gpt-5.6-luna") {
+    return variants.includes("medium") ? "medium" : undefined;
   }
   if (providerID === "anthropic" || providerID.startsWith("google")) {
     return variants.includes("high") ? "high" : undefined;
@@ -174,7 +181,7 @@ function openCodeCapabilitiesForModel(input: {
   readonly agents: ReadonlyArray<Agent>;
 }): ModelCapabilities {
   const variantValues = Object.keys(input.model.variants ?? {});
-  const defaultVariant = inferDefaultVariant(input.providerID, variantValues);
+  const defaultVariant = inferDefaultVariant(input.providerID, input.model.id, variantValues);
   const variantOptions = variantValues.map((value) =>
     defaultVariant === value
       ? { id: value, label: titleCaseSlug(value), isDefault: true as const }

@@ -207,6 +207,58 @@ it.layer(testLayer)("checkOpenCodeProviderStatus", (it) => {
     }),
   );
 
+  it.effect("uses each GPT 5.6 model's standard reasoning variant by default", () =>
+    Effect.gen(function* () {
+      const variants = {
+        low: { reasoningEffort: "low", serviceTier: "default" },
+        "low-fast": { reasoningEffort: "low", serviceTier: "priority" },
+        medium: { reasoningEffort: "medium", serviceTier: "default" },
+        "medium-fast": { reasoningEffort: "medium", serviceTier: "priority" },
+        high: { reasoningEffort: "high", serviceTier: "default" },
+      };
+      runtimeMock.state.inventory = {
+        providerList: {
+          connected: ["mac-local"],
+          all: [
+            {
+              id: "mac-local",
+              name: "Mac Local",
+              models: Object.fromEntries(
+                ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"].map((id) => [
+                  id,
+                  { id, name: id, variants },
+                ]),
+              ),
+            },
+          ],
+          default: {},
+        },
+        agents: [],
+      };
+
+      const snapshot = yield* checkOpenCodeProviderStatus(makeOpenCodeSettings(), process.cwd());
+      const defaultVariantByModel = Object.fromEntries(
+        snapshot.models.map((model) => {
+          const descriptor = model.capabilities?.optionDescriptors?.find(
+            (candidate) => candidate.id === "variant" && candidate.type === "select",
+          );
+          return [
+            model.slug,
+            descriptor?.type === "select"
+              ? descriptor.options.find((option) => option.isDefault)?.id
+              : undefined,
+          ];
+        }),
+      );
+
+      NodeAssert.deepEqual(defaultVariantByModel, {
+        "mac-local/gpt-5.6-sol": "low",
+        "mac-local/gpt-5.6-terra": "medium",
+        "mac-local/gpt-5.6-luna": "medium",
+      });
+    }),
+  );
+
   it.effect("does not spawn a local server for health check (uses CLI instead)", () =>
     Effect.gen(function* () {
       yield* checkOpenCodeProviderStatus(makeOpenCodeSettings(), process.cwd());
